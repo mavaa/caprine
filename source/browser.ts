@@ -57,7 +57,7 @@ async function withMenu(
 async function withSettingsMenu(isNewDesign: boolean, callback: () => Promise<void> | void): Promise<void> {
 	// If ui is new, get the new settings menu
 	const settingsMenu = isNewDesign ?
-		(await elementReady<HTMLElement>('.rq0escxv.l9j0dhe7.du4w35lb.j83agx80.cbu4d94t.pfnyh3mw.d2edcug0.hpfvmrgz.aovydwv3.p8cu3f6v.kb5gq1qc.taijpn5t.b0upgy8r .j83agx80.pfnyh3mw .ozuftl9m [role=button]', {stopOnDomReady: false}))! :
+		(await elementReady<HTMLElement>('.rq0escxv.l9j0dhe7.du4w35lb.j83agx80.cbu4d94t.pfnyh3mw.d2edcug0.hpfvmrgz.aovydwv3.dz1kfvuc.kb5gq1qc.taijpn5t.b0upgy8r .j83agx80.pfnyh3mw .ozuftl9m [role=button]', {stopOnDomReady: false}))! :
 		(await elementReady<HTMLElement>('._30yy._6ymd._2agf,._30yy._2fug._p', {stopOnDomReady: false}))!;
 
 	await withMenu(isNewDesign, settingsMenu, callback);
@@ -389,6 +389,17 @@ function setThemeElement(element: HTMLElement): void {
 	element.classList.toggle('light-mode', !useDarkColors);
 	element.classList.toggle('__fb-dark-mode', useDarkColors);
 	element.classList.toggle('__fb-light-mode', !useDarkColors);
+	removeThemeClasses(useDarkColors);
+}
+
+function removeThemeClasses(useDarkColors: boolean): void {
+	// TODO: Workaround for Facebooks buggy frontend
+	// The ui sometimes hardcodes ligth mode classes in the ui. This removes them so the class
+	// in the root element would be used.
+	const className = useDarkColors ? '__fb-light-mode' : '__fb-dark-mode';
+	for (const element of document.querySelectorAll(`.${className}`)) {
+		element.classList.remove(className);
+	}
 }
 
 async function observeTheme(): Promise<void> {
@@ -535,16 +546,17 @@ ipc.answerMain('render-overlay-icon', (messageCount: number): {data: string; tex
 ipc.answerMain('render-native-emoji', (emoji: string): string => {
 	const canvas = document.createElement('canvas');
 	const context = canvas.getContext('2d')!;
+	const systemFont = is.linux ? 'emoji, system-ui' : 'system-ui';
 	canvas.width = 256;
 	canvas.height = 256;
 	context.textAlign = 'center';
 	context.textBaseline = 'middle';
 	if (is.macos) {
-		context.font = '256px system-ui';
+		context.font = `256px ${systemFont}`;
 		context.fillText(emoji, 128, 154);
 	} else {
 		context.textBaseline = 'bottom';
-		context.font = '225px system-ui';
+		context.font = `225px ${systemFont}`;
 		context.fillText(emoji, 128, 256);
 	}
 
@@ -798,6 +810,19 @@ async function observeAutoscroll(): Promise<void> {
 	conversationObserver.observe(mainElement, {childList: true});
 }
 
+async function observeThemeBugs(): Promise<void> {
+	const rootObserver = new MutationObserver((record: MutationRecord[]) => {
+		const newNodes: MutationRecord[] = record
+			.filter(record => record.addedNodes.length > 0 || record.removedNodes.length > 0);
+
+		if (newNodes) {
+			removeThemeClasses(Boolean(api.nativeTheme.shouldUseDarkColors));
+		}
+	});
+
+	rootObserver.observe(document.documentElement, {childList: true, subtree: true});
+}
+
 // Listen for emoji element dom insertion
 document.addEventListener('animationstart', insertionListener, false);
 
@@ -843,6 +868,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 	// Hook auto-scroll observer
 	observeAutoscroll();
+
+	// Hook broken dark mode observer
+	observeThemeBugs();
 });
 
 // Handle title bar double-click.

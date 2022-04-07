@@ -1,7 +1,7 @@
 {
 	"name": "caprine",
 	"productName": "Caprine",
-	"version": "2.55.0",
+	"version": "2.55.4",
 	"description": "Elegant Facebook Messenger desktop app",
 	"license": "MIT",
 	"repository": "sindresorhus/caprine",
@@ -45,8 +45,8 @@
 		"@types/facebook-locales": "^1.0.0",
 		"@types/lodash": "^4.14.165",
 		"del-cli": "^3.0.1",
-		"electron": "^10.1.5",
-		"electron-builder": "^22.9.1",
+		"electron": "^10.4.7",
+		"electron-builder": "^22.14.13",
 		"husky": "^4.3.0",
 		"np": "^7.0.0",
 		"stylelint": "^13.8.0",
@@ -133,7 +133,17 @@
 				"camera",
 				"removable-media"
 			],
-			"publish": "github"
+			"publish": [
+				{
+					"provider": "github"
+				},
+				{
+					"provider": "snapStore",
+					"channels": [
+						"stable"
+					]
+				}
+			]
 		},
 		"win": {
 			"verifyUpdateCodeSignature": false,
